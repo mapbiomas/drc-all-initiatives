@@ -1,29 +1,40 @@
-// Export land cover / land use area yearly by territory sets
-// MapBiomas DRC - Collection 1
-// dhemerson.costa@ipam.org.br
+// =============================================================================
+// MAPBIOMAS DRC - COLLECTION 1
+// Export LULC area PER YEAR and PER TERRITORY SET
+//
+// Output:
+//   1 CSV per territory type per year
+//
+// Examples:
+//   drc_col1_lulc_area_province_2000.csv
+//   drc_col1_lulc_area_province_2001.csv
+//   ...
+//   drc_col1_lulc_area_territory_2025.csv
+//   drc_col1_lulc_area_protected_area_2025.csv
+//
+// Total tasks: 4 territory sets x 26 years = 104 tasks
+// =============================================================================
 
 
-// -----------------------------------------------------------------------------
-// 1. READ CLASSIFICATION
-// -----------------------------------------------------------------------------
+// =============================================================================
+// 1. CLASSIFICATION
+// =============================================================================
 
 var collection = ee.Image(
   'projects/mapbiomas-drc/assets/LAND-COVER/COLLECTION-1/INTEGRATION/' +
   'classificationDRC_classification_integrated_v10'
 );
 
-// Mask pixels without classification
-var asset_i = collection.selfMask();
+// Mask unclassified pixels
+var classification = collection.selfMask();
 
 
-// -----------------------------------------------------------------------------
+// =============================================================================
 // 2. PARAMETERS
-// -----------------------------------------------------------------------------
+// =============================================================================
 
-// Change scale if needed
 var scale = 30;
 
-// Years to process
 var years = [
   2000, 2001, 2002, 2003, 2004, 2005,
   2006, 2007, 2008, 2009, 2010, 2011,
@@ -32,46 +43,62 @@ var years = [
   2024, 2025
 ];
 
-// Google Drive output folder
-var driveFolder = 'mapbiomas-drc-col1-lulc-area';
+// All CSV files will go into this same Drive folder
+var driveFolder = 'mapbiomas-drc-col1-lulc-area-yearly';
 
 
-// -----------------------------------------------------------------------------
-// 3. TERRITORY CONFIGURATION
-// -----------------------------------------------------------------------------
+// =============================================================================
+// 3. TERRITORY DATASETS
+// =============================================================================
 
 var territorySets = [
 
   {
     name: 'province',
-    asset: 'projects/mapbiomas-drc/assets/TERRITORIES/COL-1/Limite_Province_RDC_reproj',
+
+    asset:
+      'projects/mapbiomas-drc/assets/TERRITORIES/COL-1/' +
+      'Limite_Province_RDC_reproj',
+
     idField: 'CODE_INS'
   },
 
   {
     name: 'country',
-    asset: 'projects/mapbiomas-drc/assets/TERRITORIES/COL-1/Limite_RDC_reproj',
+
+    asset:
+      'projects/mapbiomas-drc/assets/TERRITORIES/COL-1/' +
+      'Limite_RDC_reproj',
+
     idField: 'CODE_INS'
   },
 
   {
     name: 'territory',
-    asset: 'projects/mapbiomas-drc/assets/TERRITORIES/COL-1/Limite_territoire_RDC_reproj',
+
+    asset:
+      'projects/mapbiomas-drc/assets/TERRITORIES/COL-1/' +
+      'Limite_territoire_RDC_reproj',
+
     idField: 'CODE_INS'
   },
 
   {
     name: 'protected_area',
-    asset: 'projects/mapbiomas-drc/assets/TERRITORIES/COL-1/RDC_aires_protegees',
+
+    asset:
+      'projects/mapbiomas-drc/assets/TERRITORIES/COL-1/' +
+      'RDC_aires_protegees',
+
     idField: 'OBJECTID_1'
   }
 
 ];
 
 
-// -----------------------------------------------------------------------------
+// =============================================================================
 // 4. PIXEL AREA
-// -----------------------------------------------------------------------------
+// =============================================================================
 
 // Pixel area in hectares
 var pixelArea = ee.Image.pixelArea()
@@ -79,9 +106,9 @@ var pixelArea = ee.Image.pixelArea()
   .rename('area');
 
 
-// -----------------------------------------------------------------------------
-// 5. CONVERT GROUPED REDUCER OUTPUT TO TABLE
-// -----------------------------------------------------------------------------
+// =============================================================================
+// 5. CONVERT GROUPED REDUCER RESULT TO FEATURE COLLECTION
+// =============================================================================
 
 var convert2table = function(obj) {
 
@@ -89,14 +116,19 @@ var convert2table = function(obj) {
 
   var territoryId = obj.get('territory');
 
-  var classesAndAreas = ee.List(obj.get('groups'));
+  var classesAndAreas = ee.List(
+    obj.get('groups')
+  );
 
-  var tableRows = classesAndAreas.map(function(classAndArea) {
+
+  var rows = classesAndAreas.map(function(classAndArea) {
 
     classAndArea = ee.Dictionary(classAndArea);
 
     var classId = classAndArea.get('class');
+
     var area = classAndArea.get('sum');
+
 
     return ee.Feature(null)
       .set('territory', territoryId)
@@ -105,100 +137,150 @@ var convert2table = function(obj) {
 
   });
 
-  return ee.FeatureCollection(tableRows);
+
+  return ee.FeatureCollection(rows);
+
 };
 
 
-// -----------------------------------------------------------------------------
-// 6. CALCULATE AREA
-// -----------------------------------------------------------------------------
+// =============================================================================
+// 6. AREA CALCULATION
+// =============================================================================
+//
+// Input image bands:
+//
+//   0 = area
+//   1 = territory
+//   2 = class
+//
+// Group first by class and then by territory.
+//
+// =============================================================================
 
-var calculateArea = function(image, territoryImage, geometry) {
+var calculateArea = function(
+  lulcImage,
+  territoryImage,
+  geometry
+) {
 
-  // Band order:
-  // 0 = area
-  // 1 = territory
-  // 2 = classification
+  var data = pixelArea
 
-  var territoriesData = pixelArea
     .addBands(territoryImage)
-    .addBands(image.rename('class'))
+
+    .addBands(
+      lulcImage.rename('class')
+    )
+
     .reduceRegion({
 
-      reducer: ee.Reducer.sum()
+      reducer: ee.Reducer
+        .sum()
+
         .group({
           groupField: 1,
           groupName: 'class'
         })
+
         .group({
           groupField: 1,
           groupName: 'territory'
         }),
 
       geometry: geometry,
+
       scale: scale,
+
       maxPixels: 1e13,
+
       tileScale: 4
 
     });
 
-  var groupedData = ee.List(
-    ee.Dictionary(territoriesData).get('groups')
+
+  var groups = ee.List(
+    ee.Dictionary(data).get('groups')
   );
 
-  var areas = groupedData.map(convert2table);
 
-  return ee.FeatureCollection(areas).flatten();
+  var areas = groups.map(
+    convert2table
+  );
+
+
+  return ee.FeatureCollection(
+    areas
+  ).flatten();
+
 };
 
 
-// -----------------------------------------------------------------------------
-// 7. PROCESS EACH TERRITORY SET
-// -----------------------------------------------------------------------------
+// =============================================================================
+// 7. PROCESS EACH TERRITORY DATASET
+// =============================================================================
 
 territorySets.forEach(function(config) {
 
-  print('--------------------------------------------------');
-  print('Processing:', config.name);
-  print('Asset:', config.asset);
-  print('ID field:', config.idField);
 
+  // ===========================================================================
+  // 7.1 READ VECTOR
+  // ===========================================================================
 
-  // ---------------------------------------------------------------------------
-  // Read vector
-  // ---------------------------------------------------------------------------
+  var territoryVector = ee.FeatureCollection(
+    config.asset
+  );
 
-  var territoryVector = ee.FeatureCollection(config.asset);
 
   print(
-    'Number of features - ' + config.name,
+    '--------------------------------------------------'
+  );
+
+  print(
+    'Territory type:',
+    config.name
+  );
+
+  print(
+    'Asset:',
+    config.asset
+  );
+
+  print(
+    'ID field:',
+    config.idField
+  );
+
+  print(
+    'Number of features:',
     territoryVector.size()
   );
 
-  print(
-    'First feature - ' + config.name,
-    territoryVector.first()
+
+  // ===========================================================================
+  // 7.2 CREATE NUMERIC TERRITORY ID
+  // ===========================================================================
+
+  territoryVector = territoryVector.map(
+    function(feature) {
+
+      var territoryId = ee.Number.parse(
+        ee.String(
+          feature.get(config.idField)
+        )
+      );
+
+
+      return feature.set(
+        'territory_id',
+        territoryId
+      );
+
+    }
   );
 
 
-  // ---------------------------------------------------------------------------
-  // Create standardized numerical territory ID
-  // ---------------------------------------------------------------------------
-
-  territoryVector = territoryVector.map(function(feature) {
-
-    var territoryId = ee.Number.parse(
-      ee.String(feature.get(config.idField))
-    );
-
-    return feature.set('territory_id', territoryId);
-
-  });
-
-
-  // ---------------------------------------------------------------------------
-  // Rasterize territories
-  // ---------------------------------------------------------------------------
+  // ===========================================================================
+  // 7.3 RASTERIZE TERRITORIES
+  // ===========================================================================
 
   var territoryImage = ee.Image()
     .paint({
@@ -209,193 +291,236 @@ territorySets.forEach(function(config) {
     .toInt64();
 
 
-  // ---------------------------------------------------------------------------
-  // MAP QA - RASTER
-  // ---------------------------------------------------------------------------
+  // ===========================================================================
+  // 7.4 MAP QA - RASTERIZED TERRITORIES
+  // ===========================================================================
 
   Map.addLayer(
+
     territoryImage.randomVisualizer(),
+
     {},
+
     'RASTER - ' + config.name,
+
     false,
+
     0.7
+
   );
 
 
-  // ---------------------------------------------------------------------------
-  // MAP QA - VECTOR BOUNDARIES
-  // ---------------------------------------------------------------------------
+  // ===========================================================================
+  // 7.5 MAP QA - ORIGINAL VECTOR
+  // ===========================================================================
 
   var vectorStyle = territoryVector.style({
+
     color: '000000',
+
     fillColor: '00000000',
+
     width: 1
+
   });
 
+
   Map.addLayer(
+
     vectorStyle,
+
     {},
+
     'VECTOR - ' + config.name,
+
     false
+
   );
 
 
-  // ---------------------------------------------------------------------------
-  // Processing geometry
-  // ---------------------------------------------------------------------------
+  // ===========================================================================
+  // 7.6 PROCESSING GEOMETRY
+  // ===========================================================================
 
   var geometry = territoryVector.geometry();
 
 
-  // ---------------------------------------------------------------------------
-  // Calculate area for every year
-  // ---------------------------------------------------------------------------
+  // ===========================================================================
+  // 7.7 CREATE ONE EXPORT PER YEAR
+  // ===========================================================================
 
-  var areas = years.map(function(year) {
+  years.forEach(function(year) {
 
-    var image = asset_i.select(
+
+    // -------------------------------------------------------------------------
+    // Select classification year
+    // -------------------------------------------------------------------------
+
+    var lulcYear = classification.select(
       'classification_' + year
     );
 
-    var yearlyAreas = calculateArea(
-      image,
+
+    // -------------------------------------------------------------------------
+    // Calculate area
+    // -------------------------------------------------------------------------
+
+    var areas = calculateArea(
+
+      lulcYear,
+
       territoryImage,
+
       geometry
+
     );
 
 
-    // Add metadata
-    yearlyAreas = yearlyAreas.map(function(feature) {
+    // -------------------------------------------------------------------------
+    // Add standardized metadata
+    // -------------------------------------------------------------------------
+
+    areas = areas.map(function(feature) {
 
       return feature
-        .set('year', year)
-        .set('territory_type', config.name);
+
+        .set(
+          'territory_type',
+          config.name
+        )
+
+        .set(
+          'year',
+          year
+        );
 
     });
 
-    return yearlyAreas;
+
+    // -------------------------------------------------------------------------
+    // Standardized filename
+    //
+    // Example:
+    // drc_col1_lulc_area_province_2000
+    // drc_col1_lulc_area_territory_2015
+    // drc_col1_lulc_area_protected_area_2025
+    // -------------------------------------------------------------------------
+
+    var outputName =
+
+      'drc_col1_lulc_area_' +
+
+      config.name +
+
+      '_' +
+
+      year;
+
+
+    // -------------------------------------------------------------------------
+    // EXPORT
+    // -------------------------------------------------------------------------
+
+    Export.table.toDrive({
+
+      collection: areas,
+
+      description: outputName,
+
+      folder: driveFolder,
+
+      fileNamePrefix: outputName,
+
+      fileFormat: 'CSV',
+
+      selectors: [
+
+        'territory',
+
+        'territory_type',
+
+        'class_id',
+
+        'year',
+
+        'area'
+
+      ]
+
+    });
+
+
+    print(
+      'Export created:',
+      outputName
+    );
+
 
   });
-
-
-  // Flatten all years into one table
-  areas = ee.FeatureCollection(areas).flatten();
-
-
-  // ---------------------------------------------------------------------------
-  // Standardized output name
-  // ---------------------------------------------------------------------------
-
-  var outputName =
-    'drc_col1_lulc_area_' +
-    config.name +
-    '_2000_2025';
-
-
-  // ---------------------------------------------------------------------------
-  // Check output in console
-  // ---------------------------------------------------------------------------
-
-  print(
-    'Output sample - ' + config.name,
-    areas.limit(10)
-  );
-
-  print(
-    'Number of rows - ' + config.name,
-    areas.size()
-  );
-
-
-  // ---------------------------------------------------------------------------
-  // Export CSV
-  // ---------------------------------------------------------------------------
-
-  Export.table.toDrive({
-
-    collection: areas,
-
-    description: outputName,
-
-    folder: driveFolder,
-
-    fileNamePrefix: outputName,
-
-    fileFormat: 'CSV',
-
-    selectors: [
-      'territory',
-      'territory_type',
-      'class_id',
-      'year',
-      'area'
-    ]
-
-  });
-
-  print(
-    'Export task created:',
-    outputName
-  );
 
 });
 
 
-// -----------------------------------------------------------------------------
+// =============================================================================
 // 8. CENTER MAP OVER DRC
-// -----------------------------------------------------------------------------
+// =============================================================================
 
 var drcBoundary = ee.FeatureCollection(
-  'projects/mapbiomas-drc/assets/TERRITORIES/COL-1/Limite_RDC_reproj'
+  'projects/mapbiomas-drc/assets/TERRITORIES/COL-1/' +
+  'Limite_RDC_reproj'
 );
 
-Map.centerObject(drcBoundary, 5);
-
-
-// -----------------------------------------------------------------------------
-// 9. OPTIONAL CLASSIFICATION LAYER FOR VISUAL REFERENCE
-// -----------------------------------------------------------------------------
-
-// Turn this on if you want to compare territory boundaries/rasterization
-// against the land-cover map.
-
-var classification2025 = asset_i.select(
-  'classification_2025'
+Map.centerObject(
+  drcBoundary,
+  5
 );
+
+
+// =============================================================================
+// 9. OPTIONAL CLASSIFICATION LAYER
+// =============================================================================
 
 Map.addLayer(
-  classification2025,
+
+  classification.select(
+    'classification_2025'
+  ),
+
   {
     min: 0,
     max: 62
   },
+
   'Classification 2025',
+
   false
+
 );
 
 
-// -----------------------------------------------------------------------------
-// OUTPUT TASKS CREATED:
+// =============================================================================
+// EXPECTED EXPORTS
+// =============================================================================
 //
-// drc_col1_lulc_area_province_2000_2025
-// drc_col1_lulc_area_country_2000_2025
-// drc_col1_lulc_area_territory_2000_2025
-// drc_col1_lulc_area_protected_area_2000_2025
+// PROVINCE
+// drc_col1_lulc_area_province_2000.csv
+// drc_col1_lulc_area_province_2001.csv
+// ...
+// drc_col1_lulc_area_province_2025.csv
 //
-// Drive folder:
-// mapbiomas-drc-col1-lulc-area
+// COUNTRY
+// drc_col1_lulc_area_country_2000.csv
+// ...
+// drc_col1_lulc_area_country_2025.csv
 //
-// Layers available for QA:
+// TERRITORY
+// drc_col1_lulc_area_territory_2000.csv
+// ...
+// drc_col1_lulc_area_territory_2025.csv
 //
-// RASTER - province
-// VECTOR - province
+// PROTECTED AREA
+// drc_col1_lulc_area_protected_area_2000.csv
+// ...
+// drc_col1_lulc_area_protected_area_2025.csv
 //
-// RASTER - country
-// VECTOR - country
-//
-// RASTER - territory
-// VECTOR - territory
-//
-// RASTER - protected_area
-// VECTOR - protected_area
-// -----------------------------------------------------------------------------
+// =============================================================================
