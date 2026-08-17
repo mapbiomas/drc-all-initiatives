@@ -1,0 +1,11 @@
+class_level0_5,hex_level0_5,class_level1,hex_level1,class_level2,hex_level2,ID
+Végétation naturale ,#1f8d49, 1. Forêt,#1f8d49,  1.1 Forêt dense,#1f8d49,3
+Végétation naturale ,#1f8d49, 1. Forêt,#1f8d49,  1.2 Forêt claire,#7dc975,4
+Végétation naturale ,#1f8d49, 1. Forêt,#1f8d49,  1.3 Mangrove,#04381d,5
+Végétation naturale ,#1f8d49, 2. Végétation herbeuse et arbustive,#d6bc74,  2.1 Savane,#a89358,66
+Agriculture et élevage ,#ffefc3, 3. Zones agricoles et d'élevage,#ffefc3,  3.1 Pâturage et Agricole,#ffefc3,21
+Agriculture et élevage ,#ffefc3, 3. Zones agricoles et d'élevage,#ffefc3,  3.2 Plantation forestière,#7a6c00,9
+Zone non végétalisée,#d4271e, 4. Zone non végétalisée,#d4271e,  4.1 Zone urbaine,#d4271e,24
+Zone non végétalisée,#d4271e, 4. Zone non végétalisée,#d4271e,  4.2 Autre zone sans végétation,#db4d4f,25
+Eau,#2532e4, 5. Eau,#2532e4,"  5.1 Fleuve,lac et océan",#2532e4,33
+Eau ,#2532e4, 5. Eau,#2532e4,  5.2 Glacier,#93dfe6,34
