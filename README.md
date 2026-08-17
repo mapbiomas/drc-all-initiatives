@@ -4,17 +4,19 @@ Explore our specialized resources and tools designed specifically for analyzing 
 
 #### 🌍 Biomes of Democratic Republic of the Congo
 
-- [**Amazon**](https://github.com/mapbiomas/brazil-amazon)  
-- [**Atlantic Forest**](https://github.com/mapbiomas/brazil-atlantic-forest)  
-- [**Caatinga**](https://github.com/mapbiomas/brazil-caatinga)  
-- [**Cerrado**](https://github.com/mapbiomas/brazil-cerrado)  
-- [**Pampa**](https://github.com/mapbiomas/brazil-pampa)  
-- [**Pantanal**](https://github.com/mapbiomas/brazil-pantanal)  
+- [**Humid Zone**](https://github.com/mapbiomas/drc-humid-zone)  
+- [**Miombo**](https://github.com/mapbiomas/drc-miombo)  
+- [**Mosaic**](https://github.com/mapbiomas/drc-mosaic)  
+- [**Mountain**](https://github.com/mapbiomas/drc-mountain)  
+- [**Terra Firma**](https://github.com/mapbiomas/drc-terra-firma)  
 
 ### 🛠️ LULC Integration and Post Classification Filters
 
 Integration and Post Classification Filters of LULC data:
 - [**Mapbiomas LULC Integration and Filters**](https://github.com/mapbiomas/brazil-integration-toolkit)  
 
+### 🗄️ Statistics computation 
+- [**Statistics**](https://github.com/mapbiomas/drc-all-initiatives/tree/main/statistics)
+
 ### 🗄️ Assets
-- [**MapBiomas DRC Collections**](https://github.com/mapbiomas/.github/blob/main/assets/brazil.md)
+- [**MapBiomas DRC Collections**]()
