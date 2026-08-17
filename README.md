@@ -1,4 +1,4 @@
-### 🇧🇷 Democratic Republic of the Congo 
+### <img src="https://flagcdn.com/w40/cd.png" width="20" alt="DRC flag"> Democratic Republic of the Congo 
 
 Explore our specialized resources and tools designed specifically for analyzing and monitoring land use and cover in Democratic Republic of the Congo.
 
