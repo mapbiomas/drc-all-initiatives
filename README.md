@@ -18,5 +18,34 @@ Integration and Post Classification Filters of LULC data:
 ### 🗄️ Statistics computation 
 - [**Statistics**](https://github.com/mapbiomas/drc-all-initiatives/tree/main/statistics)
 
-### 🗄️ Assets
-- [**MapBiomas DRC Collections**]()
+### 🗄️ Data access 
+- [**Google Earth Engine**]
+```javascript
+// Load MapBiomas DRC LULC 
+var collection = ee.Image(
+  'projects/mapbiomas-drc/assets/LAND-COVER/COLLECTION-1/INTEGRATION/classificationDRC_classification_integrated_v10'
+);
+
+// Center the map on the DRC LULC collection
+Map.centerObject(collection, 5);
+
+// Set visualization years
+var years = [2000, 2005, 2010, 2015, 2020, 2025];
+
+// Define visualization parameters (color palette)
+var Palette = require('users/mapbiomas-global/LULC:LULC_palette.js');
+var vis_LULC = Palette.get('vis_LULC');
+
+// Plot maps
+years.forEach(function(year) {
+  
+  Map.addLayer(
+    collection.select('classification_' + year),
+    vis_LULC,
+    'LULC ' + year
+  );
+  
+});
+```
+[Link to script](https://code.earthengine.google.com/c439325bf3439bcdffb84234da33d43c)
+
