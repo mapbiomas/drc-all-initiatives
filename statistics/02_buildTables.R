@@ -38,6 +38,9 @@
 # protected_area:
 #   table$territory <-> shapefile$OBJECTID_1
 #
+# biome:
+#   table$territory <-> shapefile$id
+#
 #
 # CLASS MATCHING:
 #
@@ -635,6 +638,16 @@ protected_area <- read_yearly_tables(
 )
 
 
+biome <- read_yearly_tables(
+  
+  pattern =
+    "^drc_col1_lulc_area_biome_[0-9]{4}\\.csv$",
+  
+  territory_name =
+    "biome"
+)
+
+
 # =============================================================================
 # 13. FUNCTION: READ SHAPEFILE IF NEEDED
 # =============================================================================
@@ -752,6 +765,19 @@ shp_protected_area <- read_shapefile_if_needed(
 )
 
 
+shp_biome <- read_shapefile_if_needed(
+  
+  statistics =
+    biome,
+  
+  filename =
+    "DRC_Biomes_v2_midline_croped.shp",
+  
+  territory_name =
+    "biome"
+)
+
+
 # =============================================================================
 # 15. FUNCTION: DETECT TERRITORY NAME FIELD
 # =============================================================================
@@ -767,9 +793,16 @@ detect_name_column <- function(
   )
   
   
+  name_pattern <- if (identical(territory_name, "biome")) {
+    "nom|name|biome"
+  } else {
+    "nom|name"
+  }
+  
+  
   candidates <- column_names[
     grepl(
-      "nom|name",
+      name_pattern,
       column_names,
       ignore.case = TRUE
     )
@@ -1210,6 +1243,19 @@ meta_protected_area <- prepare_territory_lookup(
 )
 
 
+meta_biome <- prepare_territory_lookup(
+  
+  shp =
+    shp_biome,
+  
+  id_field =
+    "id",
+  
+  territory_name =
+    "biome"
+)
+
+
 # =============================================================================
 # 18. FUNCTION: CREATE FINAL LONG TABLE
 # =============================================================================
@@ -1597,6 +1643,19 @@ protected_area <- prepare_final_table(
 )
 
 
+biome <- prepare_final_table(
+  
+  statistics =
+    biome,
+  
+  metadata =
+    meta_biome,
+  
+  territory_name =
+    "biome"
+)
+
+
 # =============================================================================
 # 20. CHECK YEARS
 # =============================================================================
@@ -1673,6 +1732,11 @@ check_years(
 check_years(
   protected_area,
   "protected_area"
+)
+
+check_years(
+  biome,
+  "biome"
 )
 
 
@@ -1758,6 +1822,11 @@ check_duplicates(
 check_duplicates(
   protected_area,
   "protected_area"
+)
+
+check_duplicates(
+  biome,
+  "biome"
 )
 
 
@@ -1866,6 +1935,16 @@ save_csv_table(
   "drc_col1_lulc_area_protected_area_2000_2025.csv",
   
   "protected_area"
+)
+
+
+save_csv_table(
+  
+  biome,
+  
+  "drc_col1_lulc_area_biome_2000_2025.csv",
+  
+  "biome"
 )
 
 
@@ -2095,6 +2174,12 @@ territory_wide <- pivot_years(
 protected_area_wide <- pivot_years(
   protected_area,
   "protected_area"
+)
+
+
+biome_wide <- pivot_years(
+  biome,
+  "biome"
 )
 
 
@@ -2529,6 +2614,18 @@ save_xlsx_table(
 )
 
 
+save_xlsx_table(
+  
+  biome_wide,
+  
+  "drc_col1_lulc_area_biome_2000_2025.xlsx",
+  
+  "biome",
+  
+  "biome"
+)
+
+
 # =============================================================================
 # 28. FINAL STATUS
 # =============================================================================
@@ -2539,14 +2636,16 @@ status <- tibble(
     "country",
     "province",
     "territory",
-    "protected_area"
+    "protected_area",
+    "biome"
   ),
   
   available = c(
     !is.null(country),
     !is.null(province),
     !is.null(territory),
-    !is.null(protected_area)
+    !is.null(protected_area),
+    !is.null(biome)
   )
   
 ) %>%
@@ -2641,6 +2740,21 @@ if (!is.null(protected_area)) {
   
   message(
     "  XLSX -> drc_col1_lulc_area_protected_area_2000_2025.xlsx"
+  )
+}
+
+
+if (!is.null(biome)) {
+  
+  message("")
+  message("BIOME")
+  
+  message(
+    "  CSV  -> drc_col1_lulc_area_biome_2000_2025.csv"
+  )
+  
+  message(
+    "  XLSX -> drc_col1_lulc_area_biome_2000_2025.xlsx"
   )
 }
 
